@@ -385,7 +385,7 @@ def churn(old_readme: str, /):
     new_readme = re.sub(
         pattern=wk_i.waka_block_pattern,
         # repl=f"{wk_i.start_comment}\n\n```{wk_i.code_lang}\n{generated_content}\n```\n\n{wk_i.end_comment}",
-        repl=f"{wk_i.start_comment}\n\n{generated_content}",
+        repl=f"{wk_i.start_comment}\n\n{generated_content}\n\n{wk_i.end_comment}",
         string=old_readme,
     )
     if len(sys.argv) == 2 and sys.argv[1] == "--dev":
