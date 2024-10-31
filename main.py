@@ -233,6 +233,25 @@ class WakaInput:
 ################### logic ###################
 
 
+def generate_mermaid_pie_chart(stats, language_count):
+    """Convert WakaTime stats to Mermaid pie chart."""
+    chart_data = "pie\n"
+    total_seconds = sum(lang.get("total_seconds", 0) for lang in stats.get("languages", []))
+
+    top_languages = sorted(
+        stats.get("languages", []),
+        key=lambda x: x.get("total_seconds", 0),
+        reverse=True
+    )[:language_count]
+
+    for lang in top_languages:
+        lang_name = lang.get("name")
+        lang_percentage = (lang.get("total_seconds", 0) / total_seconds) * 100
+        chart_data += f'    "{lang_name}" : {lang_percentage:.1f}\n'
+
+    return f"```mermaid\n{chart_data}```"
+
+
 def make_title(dawn: str | None, dusk: str | None, /):
     """WakaReadme Title.
 
@@ -286,72 +305,18 @@ def _extract_ignored_languages():
 
 
 def prep_content(stats: dict[str, Any], /):
-    """WakaReadme Prepare Markdown.
-
-    Prepared markdown content from the fetched statistics.
-    ```
-    """
     logger.debug("Making contents")
     contents = ""
 
-    # make title
     if wk_i.show_title:
         contents += make_title(stats.get("start"), stats.get("end")) + "\n\n"
-
-    # make byline
-    if wk_i.show_masked_time and (
-        total_time := stats.get("human_readable_total_including_other_language")
-    ):
-        # overrides "human_readable_total"
-        contents += f"Total Time: {total_time}\n\n"
-    elif wk_i.show_total_time and (total_time := stats.get("human_readable_total")):
+    if wk_i.show_total_time:
+        total_time = stats.get("human_readable_total")
         contents += f"Total Time: {total_time}\n\n"
 
-    lang_info: list[dict[str, int | float | str]] | None = []
+    mermaid_chart = generate_mermaid_pie_chart(stats, wk_i.language_count)
+    contents += mermaid_chart
 
-    # Check if any language data exists
-    if not (lang_info := stats.get("languages")):
-        logger.debug("The API data seems to be empty, please wait for a day")
-        contents += "No activity tracked"
-        return contents.rstrip("\n")
-
-    # make lang content
-    pad_len = len(
-        # comment if it feels way computationally expensive
-        max((str(lng["name"]) for lng in lang_info), key=len)
-        # and then do not for get to set `pad_len` to say 13 :)
-    )
-    language_count, stop_at_other = int(wk_i.language_count), bool(wk_i.stop_at_other)
-    if language_count == 0 and not wk_i.stop_at_other:
-        logger.debug(
-            "Set INPUT_LANG_COUNT to -1 to retrieve all language"
-            + " or specify a positive number (ie. above 0)"
-        )
-        return contents.rstrip("\n")
-
-    ignored_languages = set(_extract_ignored_languages())
-    logger.debug(f"Ignoring {', '.join(ignored_languages)}")
-    for idx, lang in enumerate(lang_info):
-        lang_name = str(lang["name"])
-        if lang_name in ignored_languages:
-            continue
-        lang_time = str(lang["text"]) if wk_i.show_time else ""
-        lang_ratio = float(lang["percent"])
-        lang_bar = make_graph(wk_i.block_style, lang_ratio, wk_i.graph_length, lang_name)
-        contents += (
-            f"{lang_name.ljust(pad_len)}   "
-            + f"{lang_time: <16}{lang_bar}   "
-            + f"{lang_ratio:.2f}".zfill(5)
-            + " %\n"
-        )
-        if language_count == -1:
-            continue
-        if stop_at_other and (lang_name == "Other"):
-            break
-        if idx + 1 >= language_count > 0:  # idx starts at 0
-            break
-
-    logger.debug("Contents were made\n")
     return contents.rstrip("\n")
 
 
