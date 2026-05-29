@@ -1,31 +1,4 @@
-FROM docker.io/python:3-slim
-
-ENV INPUT_GH_TOKEN \
-    INPUT_WAKATIME_API_KEY \
-    # meta
-    INPUT_API_BASE_URL \
-    INPUT_REPOSITORY \
-    # content
-    INPUT_SHOW_TITLE \
-    INPUT_SECTION_NAME \
-    INPUT_BLOCKS \
-    INPUT_CODE_LANG \
-    INPUT_TIME_RANGE \
-    INPUT_LANG_COUNT \
-    INPUT_SHOW_TIME \
-    INPUT_SHOW_TOTAL \
-    INPUT_SHOW_MASKED_TIME \
-    INPUT_STOP_AT_OTHER \
-    INPUT_IGNORED_LANGUAGES \
-    # commit
-    INPUT_COMMIT_MESSAGE \
-    INPUT_TARGET_BRANCH \
-    INPUT_TARGET_PATH \
-    INPUT_COMMITTER_NAME \
-    INPUT_COMMITTER_EMAIL \
-    INPUT_AUTHOR_NAME \
-    INPUT_AUTHOR_EMAIL
-
+FROM docker.io/python:3.14-slim
 
 ENV PATH="${PATH}:/root/.local/bin" \
     # python
@@ -48,4 +21,4 @@ RUN python -m pip install /app/
 COPY --chown=root:root tests /app/tests/
 
 # run tests
-CMD python -m unittest discover /app/
+CMD ["python", "-m", "unittest", "discover", "/app/"]

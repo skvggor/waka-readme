@@ -15,8 +15,8 @@ classifiers = [
     "Programming Language :: Python",
     "Typing :: Typed",
 ]
-requires-python = ">=3.12"
-dependencies = ["faker>=26.0.0", "pygithub>=2.3.0", "requests>=2.32.3"]
+requires-python = ">=3.14"
+dependencies = ["faker>=40.19.1", "pygithub>=2.9.1", "requests>=2.34.2"]
 
 [project.urls]
 Homepage = "https://github.com/athul/waka-readme"
@@ -29,14 +29,14 @@ Changelog = "https://github.com/athul/waka-readme/commits/master"
 #############################
 
 [project.optional-dependencies]
-extra = ["loguru>=0.7.2", "python-dotenv>=1.0.1"]
+extra = ["loguru>=0.7.3", "python-dotenv>=1.2.2"]
 
 #############################
 # Development Dependencies  #
 #############################
 
 [tool.pdm.dev-dependencies]
-tooling = ["bandit>=1.7.9", "black>=24.4.2", "ruff>=0.5.5", "pyright>=1.1.374"]
+tooling = ["bandit>=1.9.4", "black>=26.5.1", "ruff>=0.15.15", "pyright>=1.1.409"]
 
 ####################
 #  Configurations  #
@@ -47,15 +47,20 @@ exclude_dirs = [".github", "tests", ".venv", ".vscode"]
 
 [tool.black]
 line-length = 100
-target-version = ["py312"]
+target-version = ["py314"]
 
 [tool.pyright]
 exclude = ["**/__pycache__", ".venv/"]
-pythonVersion = "3.12"
+pythonVersion = "3.14"
 pythonPlatform = "All"
 typeCheckingMode = "strict"
 
 [tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = ["**/__pycache__"]
+
+[tool.ruff.lint]
 select = [
     # Pyflakes
     "F",
@@ -71,16 +76,13 @@ select = [
     # pydocstyle
     "D",
 ]
-line-length = 100
-target-version = "py312"
-extend-exclude = ["**/__pycache__"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 # case-sensitive = true
 combine-as-imports = true
 force-sort-within-sections = true
 force-wrap-aliases = true
 relative-imports-order = "closest-to-furthest"
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
