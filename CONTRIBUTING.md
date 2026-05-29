@@ -1,6 +1,6 @@
 # Contributing
 
-![python_ver](https://img.shields.io/badge/Python-%3E%3D3.12-blue.svg)
+![python_ver](https://img.shields.io/badge/Python-%3E%3D3.14-blue.svg)
 
 > First off, thank you! Please follow along.
 
@@ -14,14 +14,11 @@ INPUT_REPOSITORY=GITHUB_USERNAME/REPOSITORY_NAME # required
 INPUT_COMMIT_MESSAGE=Updated WakaReadme graph with new metrics
 INPUT_SHOW_TITLE=true
 INPUT_SECTION_NAME=waka
-INPUT_BLOCKS=->
-INPUT_SHOW_TIME=true
+INPUT_GRAPH_STYLE=seigaiha
+INPUT_SVG_PATH=assets/waka-readme.svg
 INPUT_SHOW_TOTAL=true
 INPUT_TIME_RANGE=last_7_days
-INPUT_SHOW_MASKED_TIME=false
-INPUT_LANG_COUNT=0
-INPUT_STOP_AT_OTHER=true
-INPUT_IGNORED_LANGUAGES=
+INPUT_LANG_COUNT=5
 ```
 
 **NEVER commit this `.env` file!**
