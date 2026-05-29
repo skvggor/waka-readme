@@ -31,11 +31,15 @@ inputs:
     required: false
     default: "waka"
   GRAPH_STYLE:
-    description: "Graph renderer: 'mermaid' (pie chart) or 'seigaiha' (SVG wave band)"
+    description: "Graph renderer: 'mermaid' (pie chart) or a wagara SVG pattern (seigaiha, shippo, kikko, yabane, asanoha)"
     default: "mermaid"
     required: false
+  THEME:
+    description: "Color theme for SVG patterns: terracotta, sumi, matcha, washi, ai, sakura"
+    default: "terracotta"
+    required: false
   SVG_PATH:
-    description: "Path of the generated SVG file when GRAPH_STYLE is 'seigaiha'"
+    description: "Path of the generated SVG file when GRAPH_STYLE is a wagara pattern"
     default: "assets/waka-readme.svg"
     required: false
   TIME_RANGE:

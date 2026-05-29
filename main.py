@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
 import logging as logger
+import math
 import os
 from random import SystemRandom
 import re
@@ -149,6 +150,7 @@ class WakaInput:
     # # optional
     show_title: str | bool = os.getenv("INPUT_SHOW_TITLE") or False
     graph_style: str = os.getenv("INPUT_GRAPH_STYLE", "mermaid")
+    theme: str = os.getenv("INPUT_THEME", "terracotta")
     svg_path: str = os.getenv("INPUT_SVG_PATH", "assets/waka-readme.svg")
     time_range: str = os.getenv("INPUT_TIME_RANGE", "last_7_days")
     show_total_time: str | bool = os.getenv("INPUT_SHOW_TOTAL") or False
@@ -189,10 +191,16 @@ class WakaInput:
             self.waka_block_pattern = f"{self.start_comment}[\\s\\S]+{self.end_comment}"
 
         self.graph_style = self.graph_style.strip().lower()
-        if self.graph_style not in {"mermaid", "seigaiha"}:
+        if self.graph_style != "mermaid" and self.graph_style not in _PATTERNS:
             logger.warning("Invalid graph style")
             logger.debug("Using default graph style: mermaid")
             self.graph_style = "mermaid"
+
+        self.theme = self.theme.strip().lower()
+        if self.theme not in _THEMES:
+            logger.warning("Invalid theme")
+            logger.debug("Using default theme: terracotta")
+            self.theme = "terracotta"
 
         if not self.svg_path.strip():
             self.svg_path = "assets/waka-readme.svg"
@@ -254,20 +262,54 @@ def generate_mermaid_pie_chart(stats, language_count):
     return f"```mermaid\n{chart_data}```"
 
 
-# seigaiha palette (poster terra), matching the readme and personal-website
-_SEIGAIHA_CREAM = "#f0e0c8"
-_SEIGAIHA_DARK = "#1e1108"
-_SEIGAIHA_LINE = "#2a1810"
-_SEIGAIHA_PALETTE = (
-    "#b87040",
-    "#7a4a2a",
-    "#d89868",
-    "#9a5a3a",
-    "#c4a488",
-    "#e0a878",
-    "#5c3a22",
-    "#cfa978",
-)
+# color themes mirroring the ones used across the readme and personal-website
+_THEMES = {
+    "terracotta": {
+        "bg": "#f0e0c8",
+        "line": "#2a1810",
+        "text": "#1e1108",
+        "ramp": (
+            "#b87040",
+            "#7a4a2a",
+            "#d89868",
+            "#9a5a3a",
+            "#c4a488",
+            "#e0a878",
+            "#5c3a22",
+            "#cfa978",
+        ),
+    },
+    "sumi": {
+        "bg": "#e8e2d4",
+        "line": "#2a2620",
+        "text": "#1c1a17",
+        "ramp": ("#3a3228", "#6b5c48", "#8a7e6a", "#5a5040", "#9a8c74", "#4a4030"),
+    },
+    "matcha": {
+        "bg": "#e6ecd6",
+        "line": "#2a3018",
+        "text": "#2a3018",
+        "ramp": ("#4a5a38", "#354028", "#7a8a68", "#5c7040", "#8a9878", "#425030"),
+    },
+    "washi": {
+        "bg": "#f5efe5",
+        "line": "#2a1810",
+        "text": "#2a1810",
+        "ramp": ("#8b7860", "#c0b098", "#a89878", "#6e5c44", "#b0a088", "#9a8868"),
+    },
+    "ai": {
+        "bg": "#dce8f0",
+        "line": "#13293a",
+        "text": "#1b3a4b",
+        "ramp": ("#2a5a72", "#1b3a4b", "#4a7a94", "#234d63", "#6a9ab0", "#3a6a84"),
+    },
+    "sakura": {
+        "bg": "#f7ecec",
+        "line": "#2e1a1a",
+        "text": "#2e1a1a",
+        "ramp": ("#c07a7a", "#8a5a5a", "#d6a0a0", "#a87878", "#b88a8a", "#9a6a6a"),
+    },
+}
 
 
 def _hex_to_rgb(value: str):
@@ -284,15 +326,26 @@ def _mix(color_a: str, color_b: str, ratio: float):
     return _rgb_to_hex(tuple(first[i] + (second[i] - first[i]) * ratio for i in range(3)))
 
 
-def _terra_ramp(count: int):
-    palette = _SEIGAIHA_PALETTE
-    if count <= len(palette):
-        return list(palette[:count])
-    ramp = list(palette)
+def _luminance(color: str):
+    red, green, blue = _hex_to_rgb(color)
+    return 0.299 * red + 0.587 * green + 0.114 * blue
+
+
+def _ramp(anchors: tuple[str, ...], count: int):
+    if count <= len(anchors):
+        return list(anchors[:count])
+    ramp = list(anchors)
     while len(ramp) < count:
         index = len(ramp)
-        ramp.append(_mix(palette[index % len(palette)], palette[(index + 1) % len(palette)], 0.5))
+        ramp.append(_mix(anchors[index % len(anchors)], anchors[(index + 1) % len(anchors)], 0.5))
     return ramp
+
+
+def _stroke_for(base: str, theme: dict[str, object]):
+    # light outline over dark fills, dark outline over light fills
+    if _luminance(base) < 115:
+        return _mix(base, str(theme["bg"]), 0.6)
+    return _mix(base, str(theme["line"]), 0.42)
 
 
 def _xml_escape(text: str):
@@ -301,24 +354,128 @@ def _xml_escape(text: str):
     )
 
 
-def _seigaiha_pattern(width: float, height: float, radius: float):
-    radii = (radius, radius * 2 / 3, radius / 3)
-    paths = []
+def _pattern_seigaiha(width: float, height: float, scale: float):
+    radii = (scale, scale * 2 / 3, scale / 3)
+    arcs = []
     row, y = 0, 0.0
-    while y <= height + radius:
-        offset = radius if row % 2 else 0
-        x = -radius + offset
-        while x <= width + radius:
+    while y <= height + scale:
+        offset = scale if row % 2 else 0
+        x = -scale + offset
+        while x <= width + scale:
             for r in radii:
-                paths.append(f"M{x - r:.2f},{y:.2f} A{r:.2f},{r:.2f} 0 0 0 {x + r:.2f},{y:.2f}")
-            x += 2 * radius
+                arcs.append(f"M{x - r:.1f},{y:.1f} A{r:.1f},{r:.1f} 0 0 0 {x + r:.1f},{y:.1f}")
+            x += 2 * scale
         row += 1
-        y += radius
-    return " ".join(paths)
+        y += scale
+    return f'<path d="{" ".join(arcs)}"/>'
 
 
-def generate_seigaiha_svg(stats: dict[str, Any], language_count: int, width: int = 820):
-    """Convert WakaTime stats to a seigaiha-patterned SVG band."""
+def _pattern_shippo(width: float, height: float, scale: float):
+    circles = []
+    y = 0.0
+    while y <= height + scale:
+        x = 0.0
+        while x <= width + scale:
+            circles.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{scale:.1f}"/>')
+            x += scale
+        y += scale
+    return "".join(circles)
+
+
+def _pattern_kikko(width: float, height: float, scale: float):
+    cells = []
+    hex_w = math.sqrt(3) * scale
+    row, cy = 0, 0.0
+    while cy <= height + scale:
+        cx = hex_w / 2 if row % 2 else 0.0
+        while cx <= width + hex_w:
+            points = [
+                (
+                    cx + scale * math.cos(math.radians(90 + 60 * k)),
+                    cy + scale * math.sin(math.radians(90 + 60 * k)),
+                )
+                for k in range(6)
+            ]
+            corners = " L".join(f"{px:.1f},{py:.1f}" for px, py in points)
+            cells.append(f'<path d="M{corners} Z"/>')
+            cx += hex_w
+        row += 1
+        cy += 1.5 * scale
+    return "".join(cells)
+
+
+def _pattern_yabane(width: float, height: float, scale: float):
+    feathers = []
+    half = scale / 2
+    x = 0.0
+    while x <= width + scale:
+        y = -scale
+        while y <= height + scale:
+            feathers.append(
+                f'<path d="M{x:.1f},{y:.1f} L{x + half:.1f},{y + half:.1f} '
+                f'L{x + scale:.1f},{y:.1f}"/>'
+            )
+            feathers.append(
+                f'<path d="M{x:.1f},{y + half:.1f} L{x + half:.1f},{y + scale:.1f} '
+                f'L{x + scale:.1f},{y + half:.1f}"/>'
+            )
+            y += scale
+        x += scale
+    return "".join(feathers)
+
+
+def _pattern_asanoha(width: float, height: float, scale: float):
+    delta_y = scale * math.sqrt(3) / 2
+    lines = []
+
+    def offset(j: int):
+        return scale / 2 if j % 2 else 0.0
+
+    def midpoint(p: tuple[float, float], q: tuple[float, float]):
+        return ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
+
+    def add_medians(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float]):
+        for vertex, opposite in ((a, midpoint(b, c)), (b, midpoint(a, c)), (c, midpoint(a, b))):
+            lines.append(f"M{vertex[0]:.1f},{vertex[1]:.1f} L{opposite[0]:.1f},{opposite[1]:.1f}")
+
+    rows = int(height / delta_y) + 2
+    cols = int(width / scale) + 2
+    for j in range(-1, rows):
+        low, high = offset(j), offset(j + 1)
+        for i in range(-1, cols):
+            add_medians(
+                (i * scale + low, j * delta_y),
+                ((i + 1) * scale + low, j * delta_y),
+                ((i + 0.5) * scale + low, (j + 1) * delta_y),
+            )
+            add_medians(
+                (i * scale + high, (j + 1) * delta_y),
+                ((i + 1) * scale + high, (j + 1) * delta_y),
+                ((i + 0.5) * scale + high, j * delta_y),
+            )
+    return f'<path d="{" ".join(lines)}"/>'
+
+
+_PATTERNS = {
+    "seigaiha": (_pattern_seigaiha, 19),
+    "shippo": (_pattern_shippo, 22),
+    "kikko": (_pattern_kikko, 18),
+    "yabane": (_pattern_yabane, 26),
+    "asanoha": (_pattern_asanoha, 30),
+}
+
+
+def generate_graph_svg(
+    stats: dict[str, Any],
+    language_count: int,
+    pattern: str = "seigaiha",
+    theme: str = "terracotta",
+    width: int = 820,
+):
+    """Convert WakaTime stats to a wagara-patterned SVG band."""
+    palette = _THEMES.get(theme, _THEMES["terracotta"])
+    pattern_fn, scale = _PATTERNS.get(pattern, _PATTERNS["seigaiha"])
+
     total_seconds = sum(lang.get("total_seconds", 0) for lang in stats.get("languages", []))
     top_languages = sorted(
         stats.get("languages", []), key=lambda lang: lang.get("total_seconds", 0), reverse=True
@@ -336,32 +493,32 @@ def generate_seigaiha_svg(stats: dict[str, Any], language_count: int, width: int
     height = pad * 2 + band_h
     graph_w = width - pad * 2 - legend_w - divider_gap * 2 - 1
     total = sum(percent for _, percent in languages) or 1
-    colors = _terra_ramp(count)
+    colors = _ramp(palette["ramp"], count)
 
     defs, segments, legend = ["<defs>"], [], []
     x = float(pad)
     for index, (name, percent) in enumerate(languages):
         seg_w = max(1.0, graph_w * percent / total - seg_gap)
         base = colors[index]
-        stroke = _mix(base, _SEIGAIHA_DARK, 0.42)
+        stroke = _stroke_for(base, palette)
         clip = f"wk-seg-{index}"
         defs.append(
             f'<clipPath id="{clip}"><rect x="{x:.2f}" y="{pad}" '
             f'width="{seg_w:.2f}" height="{band_h}" rx="6"/></clipPath>'
         )
-        pattern = _seigaiha_pattern(seg_w + 44, band_h, 19)
+        texture = pattern_fn(seg_w + 44, band_h, scale)
         segments.append(
             f'<g clip-path="url(#{clip})"><g transform="translate({x:.2f},{pad})">'
             f'<rect width="{seg_w:.2f}" height="{band_h}" fill="{base}"/>'
             f'<g fill="none" stroke="{stroke}" stroke-width="1.6" opacity="0.6">'
-            f'<path d="{pattern}"/></g></g></g>'
+            f"{texture}</g></g></g>"
         )
         x += seg_w + seg_gap
 
     div_x = pad + graph_w + divider_gap
     divider = (
         f'<line x1="{div_x:.2f}" y1="{pad + 6}" x2="{div_x:.2f}" y2="{height - pad - 6}" '
-        f'stroke="{_SEIGAIHA_LINE}" stroke-width="1" opacity="0.3"/>'
+        f'stroke="{palette["line"]}" stroke-width="1" opacity="0.3"/>'
     )
 
     legend_x = div_x + divider_gap
@@ -371,9 +528,9 @@ def generate_seigaiha_svg(stats: dict[str, Any], language_count: int, width: int
         legend.append(
             f'<rect x="{legend_x:.2f}" y="{center_y - 6:.2f}" width="12" height="12" rx="3" '
             f'fill="{colors[index]}"/>'
-            f'<text x="{legend_x + 20:.2f}" y="{center_y + 4:.2f}" fill="{_SEIGAIHA_DARK}" '
+            f'<text x="{legend_x + 20:.2f}" y="{center_y + 4:.2f}" fill="{palette["text"]}" '
             f'font-size="13" font-weight="600">{_xml_escape(name)}</text>'
-            f'<text x="{width - pad:.2f}" y="{center_y + 4:.2f}" fill="{_SEIGAIHA_LINE}" '
+            f'<text x="{width - pad:.2f}" y="{center_y + 4:.2f}" fill="{palette["line"]}" '
             f'font-size="12" text-anchor="end" opacity="0.7">{percent:.1f}%</text>'
         )
 
@@ -383,7 +540,7 @@ def generate_seigaiha_svg(stats: dict[str, Any], language_count: int, width: int
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" '
         f'font-family="Segoe UI, Helvetica, Arial, sans-serif">'
-        f'<rect width="{width}" height="{height}" rx="10" fill="{_SEIGAIHA_CREAM}"/>'
+        f'<rect width="{width}" height="{height}" rx="10" fill="{palette["bg"]}"/>'
         f"{body}</svg>"
     )
 
@@ -423,8 +580,8 @@ def prep_content(stats: dict[str, Any], /):
         total_time = stats.get("human_readable_total")
         contents += f"Total Time: {total_time}\n\n"
 
-    if wk_i.graph_style == "seigaiha":
-        contents += f'<p align="center"><img src="{wk_i.svg_path}" alt="WakaTime stats" /></p>'
+    if wk_i.graph_style in _PATTERNS:
+        contents += f'<img src="{wk_i.svg_path}" alt="WakaTime stats" />'
     else:
         contents += generate_mermaid_pie_chart(stats, wk_i.language_count)
 
@@ -489,8 +646,8 @@ def churn(old_readme: str, /) -> tuple[str | None, str | None]:
     # preparing contents
     try:
         svg_content = (
-            generate_seigaiha_svg(waka_stats, wk_i.language_count)
-            if wk_i.graph_style == "seigaiha"
+            generate_graph_svg(waka_stats, wk_i.language_count, wk_i.graph_style, wk_i.theme)
+            if wk_i.graph_style in _PATTERNS
             else None
         )
         generated_content = prep_content(waka_stats)
