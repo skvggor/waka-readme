@@ -1,14 +1,14 @@
 """Unit Tests."""
 
 # standard
-from dataclasses import dataclass  # , field
 from importlib import import_module
-from itertools import product
 import os
+import re
 import sys
 from types import SimpleNamespace
 import unittest
 from unittest import mock
+import xml.etree.ElementTree as ElementTree
 
 # from pathlib import Path
 # from inspect import cleandoc
@@ -24,98 +24,8 @@ except ImportError as err:
     # sys.exit(1)
 
 
-@dataclass
-class TestData:
-    """Test Data."""
-
-    # for future tests
-    # waka_json: dict[str, dict[str, Any]] = field(
-    #     default_factory=lambda: {}
-    # )
-    bar_percent: tuple[int | float, ...] | None = None
-    graph_blocks: tuple[str, ...] | None = None
-    waka_graphs: tuple[list[str], ...] | None = None
-    dummy_readme: str = ""
-
-    def populate(self) -> None:
-        """Populate Test Data."""
-        # for future tests
-        # with open(
-        #     file=Path(__file__).parent / "sample_data.json",
-        #     encoding="utf-8",
-        #     mode="rt",
-        # ) as wkf:
-        #     self.waka_json = load(wkf)
-
-        self.bar_percent = (0, 100, 49.999, 50, 25, 75, 3.14, 9.901, 87.334, 87.333, 4.666, 4.667)
-
-        self.graph_blocks = ("░▒▓█", "⚪⚫", "⓪①②③④⑤⑥⑦⑧⑨⑩")
-
-        self.waka_graphs = (
-            [
-                "░░░░░░░░░░░░░░░░░░░░░░░░░",
-                "█████████████████████████",
-                "████████████▒░░░░░░░░░░░░",
-                "████████████▓░░░░░░░░░░░░",
-                "██████▒░░░░░░░░░░░░░░░░░░",
-                "██████████████████▓░░░░░░",
-                "▓░░░░░░░░░░░░░░░░░░░░░░░░",
-                "██▒░░░░░░░░░░░░░░░░░░░░░░",
-                "██████████████████████░░░",
-                "█████████████████████▓░░░",
-                "█░░░░░░░░░░░░░░░░░░░░░░░░",
-                "█▒░░░░░░░░░░░░░░░░░░░░░░░",
-            ],
-            [
-                "⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪",
-                "⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫",
-                "⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪",
-                "⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪",
-                "⚫⚫⚫⚫⚫⚫⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪",
-                "⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚪⚪⚪⚪⚪⚪",
-                "⚫⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪",
-                "⚫⚫⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪",
-                "⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚪⚪⚪",
-                "⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚪⚪⚪",
-                "⚫⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪",
-                "⚫⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪⚪",
-            ],
-            [
-                "⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪",
-                "⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩",
-                "⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑤⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪",
-                "⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑤⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪",
-                "⑩⑩⑩⑩⑩⑩③⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪",
-                "⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑧⓪⓪⓪⓪⓪⓪",
-                "⑧⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪",
-                "⑩⑩⑤⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪",
-                "⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑧⓪⓪⓪",
-                "⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑩⑧⓪⓪⓪",
-                "⑩②⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪",
-                "⑩②⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪⓪",
-            ],
-        )
-
-        # self.dummy_readme = cleandoc("""
-        # My Test Readme Start
-        # <!--START_SECTION:waka-->
-        # <!--END_SECTION:waka-->
-        # My Test Readme End
-        # """)
-
-
 class TestMain(unittest.TestCase):
     """Testing Main Module."""
-
-    def test_make_graph(self) -> None:
-        """Test graph maker."""
-        if not tds.graph_blocks or not tds.waka_graphs or not tds.bar_percent:
-            raise AssertionError("Data population failed")
-
-        for (idx, grb), (jdy, bpc) in product(
-            enumerate(tds.graph_blocks), enumerate(tds.bar_percent)
-        ):
-            self.assertEqual(prime.make_graph(grb, bpc, 25), tds.waka_graphs[idx][jdy])
 
     def test_make_title(self) -> None:
         """Test title maker."""
@@ -215,8 +125,120 @@ class TestFetchStats(unittest.TestCase):
         self.assertEqual(raised.exception.code, 1)
 
 
-tds = TestData()
-tds.populate()
+class TestSeigaihaGraph(unittest.TestCase):
+    """Testing the seigaiha SVG graph generation."""
+
+    @staticmethod
+    def _stats(pairs: list[tuple[str, int]]) -> dict[str, list[dict[str, object]]]:
+        """Build a minimal WakaTime stats payload from (name, seconds) pairs."""
+        return {"languages": [{"name": name, "total_seconds": seconds} for name, seconds in pairs]}
+
+    def test_terra_ramp_uses_palette_for_small_counts(self) -> None:
+        """Counts within the palette size reuse the approved fixed colors."""
+        self.assertEqual(prime._terra_ramp(5), list(prime._SEIGAIHA_PALETTE[:5]))
+
+    def test_terra_ramp_extends_with_distinct_colors(self) -> None:
+        """Counts beyond the palette size still yield distinct colors."""
+        ramp = prime._terra_ramp(12)
+        self.assertEqual(len(ramp), 12)
+        self.assertEqual(len(set(ramp)), 12)
+
+    def test_terra_ramp_single(self) -> None:
+        """A single language uses the first palette color."""
+        self.assertEqual(prime._terra_ramp(1), [prime._SEIGAIHA_PALETTE[0]])
+
+    def test_mix_endpoints(self) -> None:
+        """Mixing at the extremes returns each endpoint color."""
+        self.assertEqual(prime._mix("#000000", "#ffffff", 0.0), "#000000")
+        self.assertEqual(prime._mix("#000000", "#ffffff", 1.0), "#ffffff")
+
+    def test_pattern_contains_arcs(self) -> None:
+        """The seigaiha path data is a sequence of arc commands."""
+        pattern = prime._seigaiha_pattern(100, 100, 20)
+        self.assertTrue(pattern.startswith("M"))
+        self.assertIn("A", pattern)
+
+    def test_svg_is_wellformed_xml(self) -> None:
+        """The generated SVG is well-formed XML."""
+        svg = prime.generate_seigaiha_svg(self._stats([("Python", 100), ("JS", 50)]), 5)
+        root = ElementTree.fromstring(svg)
+        self.assertTrue(root.tag.endswith("svg"))
+
+    def test_svg_segment_count_matches_languages(self) -> None:
+        """One clipped segment is rendered per language."""
+        svg = prime.generate_seigaiha_svg(self._stats([("Py", 100), ("JS", 50), ("Go", 25)]), 5)
+        self.assertEqual(svg.count("clip-path"), 3)
+
+    def test_svg_respects_language_count(self) -> None:
+        """Only the top `language_count` languages are rendered."""
+        stats = self._stats([("a", 5), ("b", 4), ("c", 3), ("d", 2)])
+        self.assertEqual(prime.generate_seigaiha_svg(stats, 2).count("clip-path"), 2)
+
+    def test_svg_segment_widths_are_proportional(self) -> None:
+        """A larger language gets a wider segment than a smaller one."""
+        svg = prime.generate_seigaiha_svg(self._stats([("big", 80), ("small", 20)]), 5)
+        widths = [float(w) for w in re.findall(r'<clipPath[^>]*><rect[^>]*width="([\d.]+)"', svg)]
+        self.assertGreater(widths[0], widths[1])
+
+    def test_svg_handles_empty_stats(self) -> None:
+        """Empty stats produce a valid 'No activity' placeholder SVG."""
+        svg = prime.generate_seigaiha_svg({"languages": []}, 5)
+        self.assertIn("No activity", svg)
+        ElementTree.fromstring(svg)
+
+    def test_svg_escapes_language_names(self) -> None:
+        """Language names with XML-special characters are escaped."""
+        svg = prime.generate_seigaiha_svg(self._stats([("C<>&", 100)]), 5)
+        self.assertNotIn("C<>&", svg)
+        self.assertIn("&lt;", svg)
+        ElementTree.fromstring(svg)
+
+    def test_prep_content_embeds_svg_image(self) -> None:
+        """In seigaiha mode prep_content embeds the SVG via an <img> tag."""
+        prime.wk_i = SimpleNamespace(
+            show_title=False,
+            show_total_time=False,
+            graph_style="seigaiha",
+            svg_path="assets/waka-readme.svg",
+            language_count=5,
+        )
+        content = prime.prep_content(self._stats([("Python", 100)]))
+        self.assertIn('<img src="assets/waka-readme.svg"', content)
+
+    @staticmethod
+    def _valid_config() -> object:
+        """Build a WakaInput with the minimum valid fields for validation."""
+        config = prime.WakaInput()
+        config.gh_token = "token"
+        config.waka_key = "key"
+        config.api_base_url = "https://wakatime.com/api"
+        config.repository = "owner/repo"
+        config.commit_message = "msg"
+        config.show_title = False
+        config.show_total_time = False
+        config._section_name = "waka"
+        config.time_range = "last_7_days"
+        config.language_count = 5
+        return config
+
+    def test_validate_input_falls_back_invalid_graph_style(self) -> None:
+        """An invalid graph style falls back to mermaid and svg path to its default."""
+        config = self._valid_config()
+        config.graph_style = "nonsense"
+        config.svg_path = "   "
+        self.assertTrue(config.validate_input())
+        self.assertEqual(config.graph_style, "mermaid")
+        self.assertEqual(config.svg_path, "assets/waka-readme.svg")
+
+    def test_validate_input_accepts_seigaiha(self) -> None:
+        """A valid seigaiha style is normalized to lowercase and the svg path is kept."""
+        config = self._valid_config()
+        config.graph_style = "SEIGAIHA"
+        config.svg_path = "custom/path.svg"
+        self.assertTrue(config.validate_input())
+        self.assertEqual(config.graph_style, "seigaiha")
+        self.assertEqual(config.svg_path, "custom/path.svg")
+
 
 if __name__ == "__main__":
     try:

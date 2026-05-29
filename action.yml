@@ -30,13 +30,13 @@ inputs:
     description: "Section name for data to appear in readme"
     required: false
     default: "waka"
-  BLOCKS:
-    description: "Add the progress blocks of your choice"
-    default: "░▒▓█"
+  GRAPH_STYLE:
+    description: "Graph renderer: 'mermaid' (pie chart) or 'seigaiha' (SVG wave band)"
+    default: "mermaid"
     required: false
-  CODE_LANG:
-    description: "Add syntax formatter for generated code"
-    default: "txt"
+  SVG_PATH:
+    description: "Path of the generated SVG file when GRAPH_STYLE is 'seigaiha'"
+    default: "assets/waka-readme.svg"
     required: false
   TIME_RANGE:
     description: "Time range of the queried statistics"
@@ -46,25 +46,9 @@ inputs:
     description: "Maximum number of languages to be shown"
     default: "5"
     required: false
-  SHOW_TIME:
-    description: "Displays the amount of time spent for each language"
-    default: "true"
-    required: false
   SHOW_TOTAL:
     description: "Displays total coding time"
     default: "false"
-    required: false
-  SHOW_MASKED_TIME:
-    description: "Displays total coding time including unclassified languages"
-    default: "false"
-    required: false
-  STOP_AT_OTHER:
-    description: "Stop data retrieval when language marked 'Other' is reached"
-    default: "false"
-    required: false
-  IGNORED_LANGUAGES:
-    description: "Ignore space separated, listed languages"
-    default: ""
     required: false
 
   # commit tweaks
