@@ -239,9 +239,7 @@ def generate_mermaid_pie_chart(stats, language_count):
     total_seconds = sum(lang.get("total_seconds", 0) for lang in stats.get("languages", []))
 
     top_languages = sorted(
-        stats.get("languages", []),
-        key=lambda x: x.get("total_seconds", 0),
-        reverse=True
+        stats.get("languages", []), key=lambda x: x.get("total_seconds", 0), reverse=True
     )[:language_count]
 
     for lang in top_languages:
@@ -305,6 +303,10 @@ def _extract_ignored_languages():
 
 
 def prep_content(stats: dict[str, Any], /):
+    """WakaReadme Prep Content.
+
+    Prepares markdown content from WakaTime stats.
+    """
     logger.debug("Making contents")
     contents = ""
 
@@ -384,7 +386,6 @@ def churn(old_readme: str, /):
     # substituting old contents
     new_readme = re.sub(
         pattern=wk_i.waka_block_pattern,
-        # repl=f"{wk_i.start_comment}\n\n```{wk_i.code_lang}\n{generated_content}\n```\n\n{wk_i.end_comment}",
         repl=f"{wk_i.start_comment}\n\n{generated_content}\n\n{wk_i.end_comment}",
         string=old_readme,
     )
