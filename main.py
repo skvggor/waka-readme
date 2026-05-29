@@ -325,11 +325,11 @@ def fetch_stats():
 
     Returns statistics as JSON string.
     """
-    attempts = 4
+    attempts = 6
     statistic: dict[str, dict[str, Any]] = {}
     encoded_key = str(b64encode(bytes(str(wk_i.waka_key), "utf-8")), "utf-8")
     logger.debug(f"Pulling WakaTime stats from {' '.join(wk_i.time_range.split('_'))}")
-    while attempts > 0:
+    for attempt in range(1, attempts + 1):
         resp_message, fake_ua = "", cryptogenic.choice([str(fake.user_agent()) for _ in range(5)])
         # making a request
         if (
@@ -339,19 +339,19 @@ def fetch_stats():
                     "Authorization": f"Basic {encoded_key}",
                     "User-Agent": fake_ua,
                 },
-                timeout=(30.0 * (5 - attempts)),
+                timeout=(30.0 * attempt),
             )
         ).status_code != 200:
             resp_message += f" • {conn_info}" if (conn_info := resp.json().get("message")) else ""
         logger.debug(
-            f"API response #{5 - attempts}: {resp.status_code} •" + f" {resp.reason}{resp_message}"
+            f"API response #{attempt}: {resp.status_code} •" + f" {resp.reason}{resp_message}"
         )
         if resp.status_code == 200 and (statistic := resp.json()):
             logger.debug("Fetched WakaTime statistics")
             break
-        logger.debug(f"Retrying in {30 * (5 - attempts )}s ...")
-        sleep(30 * (5 - attempts))
-        attempts -= 1
+        if attempt < attempts:
+            logger.debug(f"Retrying in {30 * attempt}s ...")
+            sleep(30 * attempt)
 
     if err := (statistic.get("error") or statistic.get("errors")):
         logger.error(f"{err}\n")
