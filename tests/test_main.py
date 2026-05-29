@@ -209,8 +209,16 @@ class TestGraphSvg(unittest.TestCase):
         self.assertIn("&lt;", svg)
         ElementTree.fromstring(svg)
 
-    def test_prep_content_embeds_svg_image(self) -> None:
-        """In any pattern mode prep_content embeds the SVG via an <img> tag."""
+    def test_svg_includes_accessibility_metadata(self) -> None:
+        """The SVG exposes role, title and a desc summarizing the languages."""
+        svg = prime.generate_graph_svg(self._stats([("Python", 75), ("CSS", 25)]), 5)
+        self.assertIn('role="img"', svg)
+        self.assertIn("<title", svg)
+        self.assertIn("<desc", svg)
+        self.assertIn("Python 75.0%", svg)
+
+    def test_prep_content_embeds_svg_image_with_descriptive_alt(self) -> None:
+        """In any pattern mode prep_content embeds the SVG via a described <img> tag."""
         prime.wk_i = SimpleNamespace(
             show_title=False,
             show_total_time=False,
@@ -220,6 +228,7 @@ class TestGraphSvg(unittest.TestCase):
         )
         content = prime.prep_content(self._stats([("Python", 100)]))
         self.assertIn('<img src="assets/waka-readme.svg"', content)
+        self.assertIn("Python 100.0%", content)
 
     @staticmethod
     def _valid_config() -> object:

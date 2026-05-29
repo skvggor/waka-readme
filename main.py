@@ -465,6 +465,22 @@ _PATTERNS = {
 }
 
 
+def _top_languages(stats: dict[str, Any], language_count: int) -> list[tuple[str, float]]:
+    total_seconds = sum(lang.get("total_seconds", 0) for lang in stats.get("languages", []))
+    top = sorted(
+        stats.get("languages", []), key=lambda lang: lang.get("total_seconds", 0), reverse=True
+    )[:language_count]
+    languages: list[tuple[str, float]] = []
+    for lang in top:
+        percent = (lang.get("total_seconds", 0) / total_seconds * 100) if total_seconds else 0.0
+        languages.append((str(lang.get("name")), percent))
+    return languages or [("No activity", 0.0)]
+
+
+def _stats_summary(languages: list[tuple[str, float]]) -> str:
+    return ", ".join(f"{name} {percent:.1f}%" for name, percent in languages)
+
+
 def generate_graph_svg(
     stats: dict[str, Any],
     language_count: int,
@@ -475,17 +491,7 @@ def generate_graph_svg(
     """Convert WakaTime stats to a wagara-patterned SVG band."""
     palette = _THEMES.get(theme, _THEMES["terracotta"])
     pattern_fn, scale = _PATTERNS.get(pattern, _PATTERNS["seigaiha"])
-
-    total_seconds = sum(lang.get("total_seconds", 0) for lang in stats.get("languages", []))
-    top_languages = sorted(
-        stats.get("languages", []), key=lambda lang: lang.get("total_seconds", 0), reverse=True
-    )[:language_count]
-    languages: list[tuple[str, float]] = []
-    for lang in top_languages:
-        percent = (lang.get("total_seconds", 0) / total_seconds * 100) if total_seconds else 0.0
-        languages.append((str(lang.get("name")), percent))
-    if not languages:
-        languages = [("No activity", 0.0)]
+    languages = _top_languages(stats, language_count)
 
     pad, seg_gap, legend_w, divider_gap, row_h = 20, 3, 184, 24, 26
     count = len(languages)
@@ -530,16 +536,19 @@ def generate_graph_svg(
             f'fill="{colors[index]}"/>'
             f'<text x="{legend_x + 20:.2f}" y="{center_y + 4:.2f}" fill="{palette["text"]}" '
             f'font-size="13" font-weight="600">{_xml_escape(name)}</text>'
-            f'<text x="{width - pad:.2f}" y="{center_y + 4:.2f}" fill="{palette["line"]}" '
-            f'font-size="12" text-anchor="end" opacity="0.7">{percent:.1f}%</text>'
+            f'<text x="{width - pad:.2f}" y="{center_y + 4:.2f}" fill="{palette["text"]}" '
+            f'font-size="12" text-anchor="end" opacity="0.85">{percent:.1f}%</text>'
         )
 
     defs.append("</defs>")
     body = "".join(defs + segments + [divider] + legend)
+    summary = _stats_summary(languages)
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}" '
+        f'viewBox="0 0 {width} {height}" role="img" aria-labelledby="wk-title wk-desc" '
         f'font-family="Segoe UI, Helvetica, Arial, sans-serif">'
+        f'<title id="wk-title">WakaTime coding stats</title>'
+        f'<desc id="wk-desc">{_xml_escape(summary)}</desc>'
         f'<rect width="{width}" height="{height}" rx="10" fill="{palette["bg"]}"/>'
         f"{body}</svg>"
     )
@@ -581,7 +590,9 @@ def prep_content(stats: dict[str, Any], /):
         contents += f"Total Time: {total_time}\n\n"
 
     if wk_i.graph_style in _PATTERNS:
-        contents += f'<img src="{wk_i.svg_path}" alt="WakaTime stats" />'
+        summary = _stats_summary(_top_languages(stats, wk_i.language_count))
+        alt = _xml_escape(f"WakaTime coding stats: {summary}")
+        contents += f'<img src="{wk_i.svg_path}" alt="{alt}" />'
     else:
         contents += generate_mermaid_pie_chart(stats, wk_i.language_count)
 
