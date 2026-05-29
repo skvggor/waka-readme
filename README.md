@@ -13,7 +13,6 @@ This is a fork of [`athul/waka-readme`](https://github.com/athul/waka-readme) th
 
 ### Mermaid (default)
 
-````md
 ```mermaid
 pie
     "TypeScript" : 63.2
@@ -22,7 +21,6 @@ pie
     "Other" : 3.5
     "ERB" : 2.7
 ```
-````
 
 ### Seigaiha
 
