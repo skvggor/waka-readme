@@ -15,6 +15,7 @@ INPUT_COMMIT_MESSAGE=Updated WakaReadme graph with new metrics
 INPUT_SHOW_TITLE=true
 INPUT_SECTION_NAME=waka
 INPUT_GRAPH_STYLE=seigaiha
+INPUT_THEME=terracotta
 INPUT_SVG_PATH=assets/waka-readme.svg
 INPUT_SHOW_TOTAL=true
 INPUT_TIME_RANGE=last_7_days

@@ -1,13 +1,13 @@
 # waka-readme · 青海波
 
-> [WakaTime](https://wakatime.com) coding stats on your profile readme — rendered as a **Mermaid** pie chart or a custom **seigaiha** (青海波) SVG wave band.
+> [WakaTime](https://wakatime.com) coding stats on your profile readme — as a **Mermaid** pie chart or a custom **wagara** (和柄, traditional Japanese pattern) SVG band.
 
 [![Unit Tests](https://github.com/skvggor/waka-readme/actions/workflows/testing.yml/badge.svg?branch=master)](https://github.com/skvggor/waka-readme/actions/workflows/testing.yml)
 
-This is a fork of [`athul/waka-readme`](https://github.com/athul/waka-readme) that swaps the classic ASCII bar graph for two cleaner renderers:
+This is a fork of [`athul/waka-readme`](https://github.com/athul/waka-readme) that swaps the classic ASCII bar graph for two renderers:
 
 - **`mermaid`** — a pie chart rendered natively by GitHub Markdown (default).
-- **`seigaiha`** — a self-contained SVG committed to your repo, drawing a segmented wave band where each language is a proportional slice in an earthy terracotta palette.
+- **wagara SVG band** — a self-contained SVG committed to your repo, where each language is a proportional slice textured with a traditional Japanese pattern, in your chosen color theme.
 
 ## Graph styles
 
@@ -22,12 +22,24 @@ pie
     "ERB" : 2.7
 ```
 
-### Seigaiha
+### Wagara SVG band
 
-When `GRAPH_STYLE: seigaiha`, the action generates an SVG, commits it to your repo (default: `assets/waka-readme.svg`) and embeds it in your readme — both in a single commit.
+Set `GRAPH_STYLE` to one of the patterns below. The action generates an SVG, commits it to your repo (default: `assets/waka-readme.svg`) and embeds it in your readme — both in a single commit.
 
 <p align="center">
   <img src="assets/seigaiha-example.svg" alt="seigaiha graph example" />
+</p>
+
+**Patterns** — `seigaiha` 青海波 · `shippo` 七宝 · `kikko` 亀甲 · `yabane` 矢絣 · `asanoha` 麻の葉
+
+<p align="center">
+  <img src="assets/patterns-preview.svg" alt="available wagara patterns" />
+</p>
+
+**Themes** (`THEME`) — `terracotta` · `sumi` 墨 · `matcha` 抹茶 · `washi` 和紙 · `ai` 藍 · `sakura` 桜
+
+<p align="center">
+  <img src="assets/themes-preview.svg" alt="available color themes" />
 </p>
 
 ## Setup
@@ -85,15 +97,16 @@ When `GRAPH_STYLE: seigaiha`, the action generates an SVG, commits it to your re
 
 ### Content
 
-| Input          | Default                  | Description                                                                 |
-| -------------- | ------------------------ | --------------------------------------------------------------------------- |
-| `GRAPH_STYLE`  | `mermaid`                | Renderer: `mermaid` (pie chart) or `seigaiha` (SVG wave band).              |
-| `SVG_PATH`     | `assets/waka-readme.svg` | Path of the generated SVG (used only when `GRAPH_STYLE: seigaiha`).         |
-| `SECTION_NAME` | `waka`                   | Name used in the `START/END_SECTION` placeholders.                          |
-| `TIME_RANGE`   | `last_7_days`            | `last_7_days`, `last_30_days`, `last_6_months`, `last_year` or `all_time`.  |
-| `LANG_COUNT`   | `5`                      | Maximum number of languages to display.                                     |
-| `SHOW_TITLE`   | `false`                  | Prefix the graph with the queried date range.                               |
-| `SHOW_TOTAL`   | `false`                  | Add a total coding time line.                                               |
+| Input          | Default                  | Description                                                                  |
+| -------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| `GRAPH_STYLE`  | `mermaid`                | `mermaid`, or a pattern: `seigaiha`, `shippo`, `kikko`, `yabane`, `asanoha`. |
+| `THEME`        | `terracotta`             | `terracotta`, `sumi`, `matcha`, `washi`, `ai`, `sakura` (SVG patterns only). |
+| `SVG_PATH`     | `assets/waka-readme.svg` | Path of the generated SVG (used only for the SVG patterns).                  |
+| `SECTION_NAME` | `waka`                   | Name used in the `START/END_SECTION` placeholders.                           |
+| `TIME_RANGE`   | `last_7_days`            | `last_7_days`, `last_30_days`, `last_6_months`, `last_year` or `all_time`.   |
+| `LANG_COUNT`   | `5`                      | Maximum number of languages to display.                                      |
+| `SHOW_TITLE`   | `false`                  | Prefix the graph with the queried date range.                                |
+| `SHOW_TOTAL`   | `false`                  | Add a total coding time line.                                                |
 
 ### Commit
 
@@ -128,7 +141,8 @@ jobs:
           API_BASE_URL: https://wakatime.com/api # optional
           REPOSITORY: your-username/your-repo # optional
           ### content
-          GRAPH_STYLE: seigaiha # optional (mermaid | seigaiha)
+          GRAPH_STYLE: seigaiha # optional (mermaid | seigaiha | shippo | kikko | yabane | asanoha)
+          THEME: terracotta # optional (terracotta | sumi | matcha | washi | ai | sakura)
           SVG_PATH: assets/waka-readme.svg # optional
           SECTION_NAME: waka # optional
           TIME_RANGE: last_30_days # optional
